@@ -12,7 +12,8 @@ CORS(app, resources={r"/*": {"origins": ["http://127.0.0.1:5500", "http://localh
 # --- AI Configuration ---
 try:
     # Get API key from environment variable
-    GEMINI_API_KEY = "AIzaSyBtK2crWOvGCkeixmAicP7AttkMOFVzlo0"
+    # Get API key from environment variable (Securely)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
     genai.configure(api_key=GEMINI_API_KEY)
     
     # Configure models
