@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEOTRUTH - AI Fake News Detector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-dark': '#1A1D29', // Dark background
+                        'brand-card': '#252A3B', // Lighter card background
+                        'brand-blue': '#4A80FF', // Primary button
+                        'brand-blue-light': '#3B6DFF', // Lighter blue for hover
+                        'brand-red': '#FF4A4A', // Fake/Error color
+                        'brand-green': '#05FFC3', // Real/Success color
+                        'brand-gray': '#9CA3AF', // Text light
+                        'brand-light': '#F9FAFB', // Text bright
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    keyframes: {
+                        'spin-slow': {
+                            '0%, 100%': { transform: 'rotate(0deg)' },
+                            '100%': { transform: 'rotate(360deg)' },
+                        },
+                        pulse: {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: 0.5 },
+                        },
+                    },
+                    animation: {
+                        'spin-slow': 'spin-slow 3s linear infinite',
+                        pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1A1D29; /* brand-dark */
+        }
+    </style>
+</head>
+<body class="dark text-brand-light antialiased">
+
+    <div class="flex flex-col items-center justify-start min-h-screen w-full pt-16 pb-20 px-4">
+
+        <header class="text-center mb-10">
+            <h1 class="text-5xl font-bold text-white mb-2">
+                NEOTRUTH 
+            </h1>
+            <p class="text-xl text-brand-gray">
+                AI-Powered Fake News Detection System
+            </p>
+        </header>
+
+        <main class="w-full max-w-4xl mx-auto">
+            <div class="bg-brand-card rounded-xl shadow-2xl overflow-hidden">
+                
+                <div class="flex border-b border-gray-700">
+                    <button id="tab-analyze" class="flex-1 py-4 px-6 text-center font-semibold text-brand-blue border-b-2 border-brand-blue">
+                        Analyze Text
+                    </button>
+                    <button id="tab-history" class="flex-1 py-4 px-6 text-center font-semibold text-brand-gray">
+                        History
+                    </button>
+                </div>
+
+                <div class="p-6 md:p-8">
+
+                    <div id="content-analyze" class="">
+                        <div class="mb-6">
+                            <label for="text-input" class="block text-sm font-medium text-brand-gray mb-2">Paste Text to Analyze</label>
+                            <textarea 
+                                id="text-input"
+                                class="w-full h-48 p-4 bg-brand-dark border border-gray-700 rounded-lg focus:ring-2 focus:ring-brand-blue focus:outline-none text-brand-light placeholder-brand-gray resize-none"
+                                placeholder="Paste a news article, social media post, or text snippet here..."
+                            ></textarea>
+                        </div>
+                        
+                        <button id="analyze-button" class="w-full bg-brand-blue text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-brand-blue-light focus:outline-none focus:ring-4 focus:ring-brand-blue focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-wait">
+                            <span id="analyze-button-icon" class="lucide-icon mr-2" data-lucide="ScanLine"></span>
+                            <span id="analyze-button-text">Analyze Text</span>
+                        </button>
+
+                        <div id="error-message" class="hidden mt-4 p-4 bg-red-800 border border-brand-red text-white rounded-lg">
+                            <p id="error-text"></p>
+                        </div>
+
+                        <div class="my-6 border-b border-gray-700"></div>
+
+                        <div id="result-container" class="hidden">
+                            <h2 class="text-2xl font-bold text-white mb-4">Analysis Result</h2>
+                            
+                            <div id="result-card" class="mb-6 p-6 rounded-lg border">
+                                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
+                                    <div class="flex items-center">
+                                        <span id="result-icon" class="lucide-icon mr-3"></span>
+                                        <h3 id="result-label" class="text-3xl font-bold"></h3>
+                                    </div>
+                                    <span id="result-confidence" class="text-lg font-medium text-brand-gray mt-2 sm:mt-0"></span>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-brand-light mb-2">AI Explanation:</h4>
+                                    <p id="result-explanation" class="text-brand-gray"></p>
+                                    <div id="explanation-loader" class="hidden items-center text-brand-gray">
+                                        <span class="lucide-icon animate-spin-slow mr-2" data-lucide="Sparkles"></span>
+                                        <span>Generating explanation...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <button id="bias-button" class="w-full bg-gray-700 text-brand-light font-medium py-3 px-6 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-gray-600 focus:outline-none focus:ring-4 focus:ring-gray-500 ring-opacity-50 disabled:opacity-50 disabled:cursor-wait">
+                                    <span id="bias-button-icon" class="lucide-icon mr-2" data-lucide="Activity"></span>
+                                    <span id="bias-button-text">Check for Bias</span>
+                                </button>
+                                <button id="source-button" class="w-full bg-gray-700 text-brand-light font-medium py-3 px-6 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-gray-600 focus:outline-none focus:ring-4 focus:ring-gray-500 ring-opacity-50 disabled:opacity-50 disabled:cursor-wait">
+                                    <span id="source-button-icon" class="lucide-icon mr-2" data-lucide="Search"></span>
+                                    <span id="source-button-text">Find Credible Sources</span>
+                                </button>
+                            </div>
+
+                            <div id="bias-result" class="hidden mt-4 p-4 bg-brand-dark rounded-lg border border-gray-700"></div>
+                            <div id="source-result" class="hidden mt-4 p-4 bg-brand-dark rounded-lg border border-gray-700"></div>
+
+                        </div>
+                    </div>
+
+                    <div id="content-history" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-white">Analysis History</h2>
+                            <button id="clear-history-button" class="text-sm text-brand-red hover:underline disabled:opacity-50">
+                                Clear History
+                            </button>
+                        </div>
+                        <div id="history-container" class="max-h-96 overflow-y-auto space-y-4">
+                            <p id="history-empty" class="text-brand-gray text-center py-8">No analysis history found.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, setDoc, addDoc, getDocs, collection, deleteDoc, doc, query, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase & App Initialization ---
+        const App = {
+            isLoading: false,
+            currentTab: 'analyze',
+            currentText: '', 
+            currentResult: null, 
+            historyUnsubscribe: null, 
+            isAuthReady: false, 
+        };
+
+        // 🛑 FIREBASE CONFIG 🛑
+        const firebaseConfig = {
+            apiKey: "AIzaSyCUUVsxR8hzZ4z_Np12EyNK9urH3IIXKbo",
+            authDomain: "neotruth-84c7b.firebaseapp.com",
+            projectId: "neotruth-84c7b",
+            storageBucket: "neotruth-84c7b.firebasestorage.app",
+            messagingSenderId: "559305287141",
+            appId: "1:559305287141:web:e0bd4e93f056746f9d7b0c",
+            measurementId: "G-REKS3D4KHZ"
+        };
+        // 🛑 ----------------🛑
+
+        let app, db, auth, userId;
+
+        // --- UI Element References ---
+        const UI = {
+            analyzeButton: document.getElementById('analyze-button'),
+            analyzeButtonText: document.getElementById('analyze-button-text'),
+            analyzeButtonIcon: document.getElementById('analyze-button-icon'),
+            textInput: document.getElementById('text-input'),
+            
+            errorMessage: document.getElementById('error-message'),
+            errorText: document.getElementById('error-text'),
+
+            resultContainer: document.getElementById('result-container'),
+            resultCard: document.getElementById('result-card'),
+            resultIcon: document.getElementById('result-icon'),
+            resultLabel: document.getElementById('result-label'),
+            resultConfidence: document.getElementById('result-confidence'),
+            resultExplanation: document.getElementById('result-explanation'),
+            explanationLoader: document.getElementById('explanation-loader'),
+
+            biasButton: document.getElementById('bias-button'),
+            biasButtonText: document.getElementById('bias-button-text'),
+            biasButtonIcon: document.getElementById('bias-button-icon'),
+            biasResult: document.getElementById('bias-result'),
+
+            sourceButton: document.getElementById('source-button'),
+            sourceButtonText: document.getElementById('source-button-text'),
+            sourceButtonIcon: document.getElementById('source-button-icon'),
+            sourceResult: document.getElementById('source-result'),
+
+            tabAnalyze: document.getElementById('tab-analyze'),
+            tabHistory: document.getElementById('tab-history'),
+            contentAnalyze: document.getElementById('content-analyze'),
+            contentHistory: document.getElementById('content-history'),
+            historyContainer: document.getElementById('history-container'),
+            historyEmpty: document.getElementById('history-empty'),
+            clearHistoryButton: document.getElementById('clear-history-button'),
+        };
+
+
+        // --- Utility Functions ---
+
+        function setButtonLoading(button, textEl, iconEl, isLoading, defaultText, loadingText = "Loading...") {
+            App.isLoading = isLoading;
+            button.disabled = isLoading;
+            if (isLoading) {
+                textEl.textContent = loadingText;
+                iconEl.setAttribute('data-lucide', 'LoaderCircle');
+                iconEl.classList.add('animate-spin');
+            } else {
+                textEl.textContent = defaultText;
+                let defaultIcon = 'ScanLine';
+                if (button.id === 'bias-button') defaultIcon = 'Activity';
+                if (button.id === 'source-button') defaultIcon = 'Search';
+                
+                iconEl.setAttribute('data-lucide', defaultIcon);
+                iconEl.classList.remove('animate-spin');
+            }
+            lucide.createIcons();
+        }
+
+        function showError(message) {
+            UI.errorText.textContent = message;
+            UI.errorMessage.classList.remove('hidden');
+        }
+
+        function hideError() {
+            UI.errorMessage.classList.add('hidden');
+        }
+
+        function clearResults() {
+            hideError();
+            UI.resultContainer.classList.add('hidden');
+            UI.biasResult.classList.add('hidden');
+            UI.sourceResult.classList.add('hidden');
+            UI.biasResult.innerHTML = '';
+            UI.sourceResult.innerHTML = '';
+            App.currentText = '';
+            App.currentResult = null;
+        }
+
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'Just now';
+            return timestamp.toDate().toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+            });
+        }
+        
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+
+        // --- Core App Logic ---
+
+        App.handleAnalyzeClick = async () => {
+            if (App.isLoading) return;
+
+            const text = UI.textInput.value;
+            if (!text.trim()) {
+                showError("Please paste some text to analyze.");
+                return;
+            }
+
+            clearResults();
+            setButtonLoading(UI.analyzeButton, UI.analyzeButtonText, UI.analyzeButtonIcon, true, "Analyze Text", "Analyzing...");
+            App.currentText = text;
+
+            try {
+                // FIXED: Relative URL for Vercel
+                const response = await fetch("/analyze", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || `HTTP error! Status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                App.displayResult(result);
+                App.currentResult = result;
+                App.saveToHistory(result, text);
+
+            } catch (error) {
+                console.error("Analysis failed:", error);
+                showError(`Analysis failed: ${error.message}`);
+            } finally {
+                setButtonLoading(UI.analyzeButton, UI.analyzeButtonText, UI.analyzeButtonIcon, false, "Analyze Text");
+            }
+        };
+
+        App.handleBiasClick = async () => {
+            if (App.isLoading || !App.currentText) return;
+
+            setButtonLoading(UI.biasButton, UI.biasButtonText, UI.biasButtonIcon, true, "Check for Bias", "Checking...");
+            UI.biasResult.classList.add('hidden');
+
+            try {
+                // FIXED: Relative URL for Vercel (Removed http://127.0.0.1:5000)
+                const response = await fetch("/bias", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: App.currentText })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || `HTTP error! Status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                UI.biasResult.innerHTML = `
+                    <h4 class="font-semibold text-brand-light mb-2">Bias Report:</h4>
+                    <p class="text-brand-gray whitespace-pre-wrap">${escapeHTML(result.report)}</p>
+                `;
+                UI.biasResult.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Bias check failed:", error);
+                UI.biasResult.innerHTML = `<p class="text-brand-red">Bias check failed: ${escapeHTML(error.message)}</p>`;
+                UI.biasResult.classList.remove('hidden');
+            } finally {
+                setButtonLoading(UI.biasButton, UI.biasButtonText, UI.biasButtonIcon, false, "Check for Bias");
+            }
+        };
+
+        App.handleSourceClick = async () => {
+            if (App.isLoading || !App.currentText) return;
+
+            setButtonLoading(UI.sourceButton, UI.sourceButtonText, UI.sourceButtonIcon, true, "Find Credible Sources", "Searching...");
+            UI.sourceResult.classList.add('hidden');
+
+            try {
+                // FIXED: Relative URL for Vercel (Removed http://127.0.0.1:5000)
+                const response = await fetch("/sources", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: App.currentText })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || `HTTP error! Status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                let sourcesHTML = '<h4 class="font-semibold text-brand-light mb-2">Found Sources:</h4>';
+                
+                if (result.sources && result.sources.length > 0) {
+                    sourcesHTML += '<ul class="list-disc list-inside space-y-2">';
+                    result.sources.forEach(source => {
+                        sourcesHTML += `
+                            <li>
+                                <a href="${escapeHTML(source.uri)}" target="_blank" rel="noopener noreferrer" class="text-brand-blue hover:underline">
+                                    ${escapeHTML(source.title)}
+                                </a>
+                            </li>
+                        `;
+                    });
+                    sourcesHTML += '</ul>';
+                } else if (result.text_fallback) {
+                     sourcesHTML += `<p class="text-brand-gray whitespace-pre-wrap">${escapeHTML(result.text_fallback)}</p>`;
+                } else {
+                    sourcesHTML += '<p class="text-brand-gray">No credible sources were found for this topic.</p>';
+                }
+                
+                UI.sourceResult.innerHTML = sourcesHTML;
+                UI.sourceResult.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Source check failed:", error);
+                UI.sourceResult.innerHTML = `<p class="text-brand-red">Source check failed: ${escapeHTML(error.message)}</p>`;
+                UI.sourceResult.classList.remove('hidden');
+            } finally {
+                setButtonLoading(UI.sourceButton, UI.sourceButtonText, UI.sourceButtonIcon, false, "Find Credible Sources");
+            }
+        };
+
+        App.displayResult = (result) => {
+            const isFake = result.label === 'Fake';
+            
+            UI.resultLabel.textContent = result.label;
+            UI.resultConfidence.textContent = `Confidence: ${result.confidence.toFixed(0)}%`;
+            
+            if (isFake) {
+                UI.resultCard.className = 'mb-6 p-6 rounded-lg border border-brand-red bg-brand-red bg-opacity-10';
+                UI.resultLabel.className = 'text-3xl font-bold text-brand-red';
+                UI.resultIcon.setAttribute('data-lucide', 'ShieldAlert');
+                UI.resultIcon.className = 'lucide-icon mr-3 text-brand-red w-8 h-8';
+            } else {
+                UI.resultCard.className = 'mb-6 p-6 rounded-lg border border-brand-green bg-brand-green bg-opacity-10';
+                UI.resultLabel.className = 'text-3xl font-bold text-brand-green';
+                UI.resultIcon.setAttribute('data-lucide', 'ShieldCheck');
+                UI.resultIcon.className = 'lucide-icon mr-3 text-brand-green w-8 h-8';
+            }
+            
+            if (result.explanation && !result.explanation.includes("Error:")) {
+                UI.resultExplanation.textContent = result.explanation;
+                UI.explanationLoader.classList.add('hidden');
+                UI.resultExplanation.classList.remove('hidden');
+            } else {
+                UI.resultExplanation.classList.add('hidden');
+                UI.explanationLoader.classList.remove('hidden');
+                UI.explanationLoader.classList.add('flex');
+                
+                if (result.explanation && result.explanation.includes("Error:")) {
+                     UI.explanationLoader.classList.add('hidden');
+                     UI.resultExplanation.textContent = "AI explanation is not available for this text.";
+                     UI.resultExplanation.classList.remove('hidden');
+                }
+            }
+
+            UI.resultContainer.classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        App.setTab = (tabName) => {
+            if (App.isLoading) return;
+            App.currentTab = tabName;
+
+            const isAnalyze = tabName === 'analyze';
+            
+            UI.tabAnalyze.classList.toggle('text-brand-blue', isAnalyze);
+            UI.tabAnalyze.classList.toggle('border-brand-blue', isAnalyze);
+            UI.tabAnalyze.classList.toggle('text-brand-gray', !isAnalyze);
+            UI.contentAnalyze.classList.toggle('hidden', !isAnalyze);
+
+            UI.tabHistory.classList.toggle('text-brand-blue', !isAnalyze);
+            UI.tabHistory.classList.toggle('border-brand-blue', !isAnalyze);
+            UI.tabHistory.classList.toggle('text-brand-gray', isAnalyze);
+            UI.contentHistory.classList.toggle('hidden', isAnalyze);
+            
+            if (tabName === 'history' && App.isAuthReady) {
+                App.listenToHistory();
+            } else if (App.historyUnsubscribe) {
+                App.historyUnsubscribe();
+                App.historyUnsubscribe = null;
+            }
+        };
+
+        // --- Firebase Functions ---
+        
+        async function initializeFirebase() {
+            if (!firebaseConfig || !firebaseConfig.apiKey) {
+                console.error("Firebase config is missing in index.html. History will not work.");
+                showError("Error: Firebase config is missing. History will not work.");
+                UI.tabHistory.disabled = true;
+                UI.tabHistory.classList.add('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+            
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('error');
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        console.log("User is signed in:", user.uid);
+                        userId = user.uid;
+                        App.isAuthReady = true;
+                        if (App.currentTab === 'history') {
+                            App.listenToHistory();
+                        }
+                    } else {
+                        console.log("No user, signing in anonymously...");
+                        await signInAnonymously(auth);
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                showError(`Firebase History feature failed to load: ${error.message}`);
+                UI.tabHistory.disabled = true;
+                UI.tabHistory.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function getHistoryCollectionPath() {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'neotruth-hackathon';
+            return `/artifacts/${appId}/public/data/history`;
+        }
+
+        App.saveToHistory = async (result, text) => {
+            if (!App.isAuthReady || !db) {
+                console.log("History not saved: Auth or DB not ready.");
+                return;
+            }
+
+            try {
+                const historyRef = collection(db, getHistoryCollectionPath());
+                await addDoc(historyRef, {
+                    ...result,
+                    text: text,
+                    timestamp: new Date()
+                });
+                console.log("History item saved.");
+            } catch (error) {
+                console.error("Error saving history:", error);
+                showError("Could not save to history.");
+            }
+        };
+
+        App.listenToHistory = () => {
+            if (!App.isAuthReady || !db || App.historyUnsubscribe) return;
+
+            const q = query(collection(db, getHistoryCollectionPath()));
+            
+            App.historyUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                const historyItems = [];
+                querySnapshot.forEach((doc) => {
+                    historyItems.push({ id: doc.id, ...doc.data() });
+                });
+                
+                historyItems.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+
+                App.displayHistory(historyItems);
+            }, (error) => {
+                console.error("Error listening to history:", error);
+                showError("Could not load history.");
+            });
+        };
+
+        App.displayHistory = (historyItems) => {
+            if (historyItems.length === 0) {
+                UI.historyEmpty.classList.remove('hidden');
+                UI.historyContainer.innerHTML = '';
+                UI.clearHistoryButton.disabled = true;
+                return;
+            }
+
+            UI.historyEmpty.classList.add('hidden');
+            UI.clearHistoryButton.disabled = false;
+            UI.historyContainer.innerHTML = '';
+
+            historyItems.forEach(item => {
+                const isFake = item.label === 'Fake';
+                const borderColor = isFake ? 'border-brand-red' : 'border-brand-green';
+                const textColor = isFake ? 'text-brand-red' : 'text-brand-green';
+                const icon = isFake ? 'ShieldAlert' : 'ShieldCheck';
+                
+                const historyCard = document.createElement('div');
+                historyCard.className = `p-4 bg-brand-dark rounded-lg border ${borderColor} border-opacity-50`;
+                
+                historyCard.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center">
+                            <span class="lucide-icon mr-2 ${textColor}" data-lucide="${icon}"></span>
+                            <span class="font-bold text-lg ${textColor}">${escapeHTML(item.label)}</span>
+                        </div>
+                        <span class="text-xs text-brand-gray">${formatTimestamp(item.timestamp)}</span>
+                    </div>
+                    <p class="text-brand-light font-medium mb-2 truncate" title="${escapeHTML(item.text)}">
+                        ${escapeHTML(item.text)}
+                    </p>
+                    <p class="text-sm text-brand-gray">${escapeHTML(item.explanation)}</p>
+                `;
+                UI.historyContainer.appendChild(historyCard);
+            });
+            lucide.createIcons();
+        };
+
+        App.clearHistory = async () => {
+            if (!App.isAuthReady || !db) return;
+            
+            UI.clearHistoryButton.disabled = true;
+            console.log("Clearing history...");
+            
+            try {
+                const q = query(collection(db, getHistoryCollectionPath()));
+                const querySnapshot = await getDocs(q);
+                
+                const deletePromises = [];
+                querySnapshot.forEach((doc) => {
+                    deletePromises.push(deleteDoc(doc.ref));
+                });
+                
+                await Promise.all(deletePromises);
+                console.log("History cleared.");
+                UI.historyContainer.innerHTML = '';
+                UI.historyEmpty.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error clearing history:", error);
+                showError("Failed to clear history.");
+                UI.clearHistoryButton.disabled = false;
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            window.App = App;
+            
+            UI.tabAnalyze.addEventListener('click', () => App.setTab('analyze'));
+            UI.tabHistory.addEventListener('click', () => App.setTab('history'));
+            UI.analyzeButton.addEventListener('click', App.handleAnalyzeClick);
+            UI.biasButton.addEventListener('click', App.handleBiasClick);
+            UI.sourceButton.addEventListener('click', App.handleSourceClick);
+            UI.clearHistoryButton.addEventListener('click', App.clearHistory);
+
+            UI.textInput.addEventListener('input', hideError);
+            
+            lucide.createIcons();
+            
+            initializeFirebase();
+        });
+    </script>
+</body>
+</html>
