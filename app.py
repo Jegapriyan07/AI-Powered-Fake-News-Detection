@@ -10,6 +10,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ["http://127.0.0.1:5500", "http://localhost:5500"]}})
 
 # --- AI Configuration ---
+# --- AI Configuration ---
 try:
     # Get API key from environment variable (Securely)
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -20,12 +21,12 @@ try:
         genai.configure(api_key=GEMINI_API_KEY)
 
     # Configure models - UPDATED TO VALID MODEL NAME
-    # Using 'gemini-1.5-flash' which is the current fast/stable model
-    generation_model = genai.GenerativeModel('gemini-1.5-flash')
+    # Using 'gemini-1.5-flash-002' to prevent 404 errors with generic aliases
+    generation_model = genai.GenerativeModel('gemini-1.5-flash-002')
     
     # Tool configuration
     grounding_model = genai.GenerativeModel(
-        'gemini-1.5-flash', 
+        'gemini-1.5-flash-002', 
         tools=[genai.types.Tool(google_search_retrieval={})]
     )
     
