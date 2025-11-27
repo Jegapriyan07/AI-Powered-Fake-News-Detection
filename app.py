@@ -11,26 +11,31 @@ CORS(app, resources={r"/*": {"origins": ["http://127.0.0.1:5500", "http://localh
 
 # --- AI Configuration ---
 try:
-    # Get API key from environment variable
     # Get API key from environment variable (Securely)
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-    genai.configure(api_key=GEMINI_API_KEY)
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
     
-    # Configure models
-    # This model is for general generation (no tools)
-    generation_model = genai.GenerativeModel('gemini-2.5-flash-preview-09-2025')
+    if not GEMINI_API_KEY:
+        print("Warning: GEMINI_API_KEY not found in environment variables.")
+    else:
+        genai.configure(api_key=GEMINI_API_KEY)
+
+    # Configure models - UPDATED TO VALID MODEL NAME
+    # Using 'gemini-1.5-flash' which is the current fast/stable model
+    generation_model = genai.GenerativeModel('gemini-1.5-flash')
     
-    # This model is specifically for grounding (with tools)
-    grounding_model = genai.GenerativeModel('gemini-2.5-flash-preview-09-2025', tools=[genai.types.Tool(google_search_retrieval={})])
+    # Tool configuration
+    grounding_model = genai.GenerativeModel(
+        'gemini-1.5-flash', 
+        tools=[genai.types.Tool(google_search_retrieval={})]
+    )
     
     print("Gemini models configured successfully.")
-except KeyError:
-    print("Error: GEMINI_API_KEY environment variable not set.")
-    print("Please set the variable (e.g., export GEMINI_API_KEY='your_key')")
-    exit()
+
 except Exception as e:
+    # DO NOT EXIT - Log the error but let the app start
     print(f"Error configuring Gemini: {e}")
-    exit()
+    generation_model = None
+    grounding_model = None
 
 # --- Helper Function: Simulate ML Model (from original JS) ---
 def simulate_ml_model(text):
@@ -57,8 +62,10 @@ def simulate_ml_model(text):
 
 # --- Helper Function: Generic Gemini Call (FIXED) ---
 def call_gemini(model, system_prompt, user_query):
+    if not model:
+        return "Error: AI model not configured correctly (check API key).", None
+
     try:
-        # --- THIS IS THE FIX ---
         # Check if the model has a 'tools' attribute. If not, pass None.
         model_tools = model.tools if hasattr(model, 'tools') else None
         
@@ -70,11 +77,9 @@ def call_gemini(model, system_prompt, user_query):
         )
         response = model_instance.generate_content(user_query)
         
-        # --- THIS IS ALSO PART OF THE FIX ---
         # Check if model_tools is not None before checking for grounding metadata
         if model_tools and response.candidates and response.candidates[0].grounding_metadata.grounding_attributions:
             return response.text, response.candidates[0].grounding_metadata.grounding_attributions
-        # ----------------------------------------
 
         return response.text, None
 
@@ -107,7 +112,7 @@ Your job is to provide a brief, human-friendly explanation of WHY the text might
 Focus on common red flags (e.g., emotional language, lack of sources) or green flags (e.g., neutral tone, cited sources).
 DO NOT simply agree with the model. Provide independent reasoning. Keep it to 2-3 sentences."""
         
-        # This uses 'generation_model', which has no tools. The fix in call_gemini handles this.
+        # This uses 'generation_model', which has no tools.
         explanation, _ = call_gemini(generation_model, system_prompt, text)
         
         # 3. Combine and return
@@ -130,7 +135,7 @@ def check_bias():
 
     system_prompt = "You are a neutral political and media analyst. Analyze the following text for any potential bias (e.g., political, commercial, selection bias, emotional language). State your findings clearly. If no significant bias is found, state that. Be concise."
     
-    # This also uses 'generation_model'. The fix in call_gemini handles this.
+    # This also uses 'generation_model'.
     bias_report, _ = call_gemini(generation_model, system_prompt, text)
     
     return jsonify({"report": bias_report})
@@ -144,7 +149,7 @@ def find_sources():
     system_prompt = "You are a research assistant. Based on the user's text, find 3-5 recent, credible news articles or reports from reputable sources that discuss the same core topic. Provide only the title and the URL for each. Do not analyze the user's text."
     user_query = f"Find credible sources related to this topic: {text}"
     
-    # This uses 'grounding_model', which has tools. The fix in call_gemini handles this.
+    # This uses 'grounding_model', which has tools.
     text_response, sources = call_gemini(grounding_model, system_prompt, user_query)
     
     formatted_sources = []
